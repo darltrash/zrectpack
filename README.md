@@ -4,10 +4,10 @@ A stb_rect_pack-inspired, dependency-free rect packing library written in zig.
 
 ## Why?
 
-I wanted a rect-packing utility using zig idioms that can integrate easily into zig projects.
-Incidentally, the zig implementation appears to be nearly 2x faster (according to rudimentary
-benchmarks, so take with an appropriate grain of salt) with some low-hanging performance
-optimizations to be made.
+I wanted a simple rect-packing utility in the spirit of stb_rect_pack but using zig idioms/features.
+Incidentally, the zig implementation appears to be nearly 2x faster than stb_rect_pack (according to
+rudimentary benchmarks, so take with an appropriate grain of salt) with some low-hanging performance
+optimizations yet to be made.
 
 ## Why not?
 
