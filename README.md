@@ -15,7 +15,7 @@ This library only implements the bottom-left placement heuristic, while stb_rect
 both bottom-left and best-fit heuristics. Foregoing the best-fit heuristic was done because it
 introduces additional complexity and runtime cost compared to the bottom-left heuristic, while
 generally appearing to pack less efficiently. I suspect there's a class of inputs for which
-best-fit is better suited, but until its utility is better understood, I don't plan off implementing
+best-fit is better suited, but until its utility is better understood, I don't plan on implementing
 it.
 
 All this is to say: If for some reason you need the best-fit heuristic, stb_rect_pack is the more
