@@ -144,7 +144,7 @@ pub const Packer = struct {
             } else {
                 // run fully covered -> delete it
                 cover -= n.w;
-                try self.nodes.replaceRange(gpa, idx, 1, &[_]Node{});
+                _ = self.nodes.orderedRemove(idx);
                 continue;
             }
 
@@ -154,7 +154,7 @@ pub const Packer = struct {
         // If the node to the right has the same height, delete it.
         if (i + 1 < self.nodes.items.len and self.nodes.items[i].y == self.nodes.items[i + 1].y) {
             self.nodes.items[i].w += self.nodes.items[i + 1].w;
-            try self.nodes.replaceRange(gpa, i + 1, 1, &[_]Node{});
+            _ = self.nodes.orderedRemove(i + 1);
         }
 
         // assert that:
