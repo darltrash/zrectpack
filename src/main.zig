@@ -1,7 +1,7 @@
 const SCREEN_WIDTH = 800;
 const SCREEN_HEIGHT = 600;
 const RECT_ATTRS_SIZE = 8;
-const DEFAULT_NUM_RECTS = 512;
+const DEFAULT_NUM_RECTS = 100;
 const DEFAULT_VBO_CAPACITY = std.math.ceilPowerOfTwo(u32, DEFAULT_NUM_RECTS * RECT_ATTRS_SIZE) catch @compileError("capacity overflow");
 
 const Mat4 = [16]f32;
@@ -21,9 +21,9 @@ const PackRun = struct {
 const RectPackOptions = struct {
     impl: u.RectPackImpl = .zrectpack,
     heuristic: c_int = stbrp.STBRP_HEURISTIC_Skyline_BL_sortHeight, // only used with stb_rect_pack
-    bin_height: c_int = 4096,
+    bin_height: c_int = SCREEN_HEIGHT,
     bin_width: c_int = SCREEN_WIDTH,
-    bin_height_viewport_sync: bool = false,
+    bin_height_viewport_sync: bool = true,
     bin_width_viewport_sync: bool = true,
 };
 
@@ -51,6 +51,7 @@ const state = struct {
     var rect_generation_opts: RectGenerationOptions = .{};
     var last_run: ?PackRun = null;
     var pack_error: bool = false;
+    var buffer_updated_this_frame: bool = false;
 };
 
 fn ortho(left: f32, right: f32, top: f32, bottom: f32) Mat4 {
@@ -142,9 +143,16 @@ export fn init() void {
         .load_action = .CLEAR,
         .clear_value = .{ .r = 0, .g = 0, .b = 0, .a = 1 },
     };
+
+    // Perform initial pack with default settings
+    pack(.zrectpack) catch |e| {
+        state.pack_error = true;
+        std.log.err("Initial pack failed: {}", .{e});
+    };
 }
 
 export fn frame() void {
+    state.buffer_updated_this_frame = false;
     const viewport_width = sapp.width();
     const viewport_height = sapp.height();
     const dt = sapp.frameDuration();
@@ -327,11 +335,26 @@ export fn event(ev: [*c]const sapp.Event) void {
             state.scroll_y = state.scroll_y - ev.*.scroll_y * SCROLL_SPEED;
         },
         .RESIZED => {
+            var should_repack = false;
             if (state.rectpack_opts.bin_width_viewport_sync) {
                 state.rectpack_opts.bin_width = sapp.width();
+                should_repack = true;
             }
             if (state.rectpack_opts.bin_height_viewport_sync) {
                 state.rectpack_opts.bin_height = sapp.height();
+                should_repack = true;
+            }
+            if (should_repack and state.last_run != null) {
+                switch (state.rectpack_opts.impl) {
+                    .zrectpack => pack(.zrectpack) catch |e| {
+                        state.pack_error = true;
+                        std.log.err("Pack error on resize: {}", .{e});
+                    },
+                    .stb => pack(.stb) catch |e| {
+                        state.pack_error = true;
+                        std.log.err("Pack error on resize: {}", .{e});
+                    },
+                }
             }
         },
         else => {},
@@ -419,7 +442,10 @@ fn pack(comptime impl: u.RectPackImpl) !void {
     };
 
     try resizeRectInstanceBufferIfNeeded();
-    sg.updateBuffer(state.bind.vertex_buffers[1], sg.asRange(state.rect_instance_attrs.items));
+    if (!state.buffer_updated_this_frame) {
+        sg.updateBuffer(state.bind.vertex_buffers[1], sg.asRange(state.rect_instance_attrs.items));
+        state.buffer_updated_this_frame = true;
+    }
 }
 
 fn updateInstanceAttrs(comptime impl: u.RectPackImpl, rects: []const u.RectType(impl)) !void {
