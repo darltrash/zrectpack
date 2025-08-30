@@ -1,6 +1,13 @@
-# zrectpack
+# zrectpack (fork)
 
 A stb_rect_pack-inspired, dependency-free rect packing library written in zig.
+
+## Fork notice:
+
+Hey, this project ain't mine! I just decided to fork it because I needed a quick and dirty rectangle
+packing algorithm and the upstream repo didn't work for me, so please, go take a look at the 
+[original repo](https://github.com/bgourlie/zrectpack), all rights to 
+[W. Brian Gurlie](https://github.com/bgourlie) 
 
 ## Why?
 
@@ -52,52 +59,30 @@ Add the dependency to your your `build.zig` and expose it to your module:
 ## Example Use
 
 ```zig
-    const zrp = @import("zrectpack");
-    const gpa = std.testing.allocator;
-    var packer = try zrp.Packer.init(gpa, .{ .bin_w = 200, .bin_h = 128 });
-    defer packer.deinit(gpa);
-    var rects: std.ArrayListUnmanaged(zrp.Rect) = .empty;
-    defer rects.deinit(gpa);
-    try rects.appendSlice(gpa, &.{
+    const alloc = std.testing.allocator;
+
+    var packer = try Packer.init(alloc, 200, 128);
+    defer packer.deinit(alloc);
+
+    var rects: std.ArrayListUnmanaged(Rect) = .empty;
+    defer rects.deinit(alloc);
+
+    try rects.appendSlice(alloc, &.{
         .{ .id = 1, .w = 128, .h = 128 },
         .{ .id = 2, .w = 16, .h = 16 },
         .{ .id = 3, .w = 32, .h = 32 },
         .{ .id = 4, .w = 32, .h = 64 },
         .{ .id = 5, .w = 64, .h = 32 },
     });
-    _ = try packer.pack(gpa, rects.items);
+
+    _ = try packer.pack(alloc, rects.items);
 
     for (rects.items) |rect| {
         switch (rect.result) {
-            .placed => |pos| std.debug.print("rect {} placed at {},{}\n", .{ rect.id, pos.x, pos.y }),
+            .placed => |pos| std.debug.print("rect {} placed at ({}, {})\n", .{ rect.id, pos.x, pos.y }),
             .not_placed => std.debug.print("rect {} couldn't be placed\n", .{rect.id}),
         }
     }
-```
-
-## Demo
-
-This repository contains a demo application that can be used to visualize packing results using
-both zrectpack and stb_rect_pack. To run:
-
-```
-zig build run --release=safe
-```
-
-The demo also runs in-browser, as seen [here](https://bgourlie.github.io/zrectpack/).
-
-To run the in-browser demo locally:
-
-```
-zig build run -Dtarget=wasm32-emscripten --release=safe
-```
-
-## Benchmarks
-
-There's a very basic set of benchmarks comparing zrectpack and stb_rect_pack. To run:
-
-```
-zig build run --release=safe
 ```
 
 ## Contributions
