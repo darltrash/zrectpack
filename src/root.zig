@@ -47,26 +47,31 @@ pub const Packer = struct {
     /// The skyline, ordered by x-pos in strictly increasing order.
     nodes: ArrayList(Node),
 
-    pub fn init(gpa: Allocator, opts: struct { bin_w: u32, bin_h: u32 }) !Packer {
+    pub fn init(allocator: Allocator, w: u32, h: u32) !Packer {
         var nodes: ArrayList(Node) = .empty;
-        try nodes.append(gpa, .{ .w = opts.bin_w, .x = 0, .y = 0 });
-        return .{ .w = opts.bin_w, .h = opts.bin_h, .nodes = nodes };
+        try nodes.append(allocator, .{ .w = w, .x = 0, .y = 0 });
+
+        return .{
+            .w = w,
+            .h = h,
+            .nodes = nodes,
+        };
     }
 
-    pub fn deinit(self: *Packer, gpa: Allocator) void {
-        self.nodes.deinit(gpa);
+    pub fn deinit(self: *Packer, allocator: Allocator) void {
+        self.nodes.deinit(allocator);
         self.* = undefined;
     }
 
     /// Pack the supplied rects. Returns `true` if all rects were packed, `false` otherwise.
-    pub fn pack(self: *Packer, gpa: Allocator, rects: []Rect) !bool {
+    pub fn pack(self: *Packer, allocator: Allocator, rects: []Rect) !bool {
         const rect_indices = blk: {
-            var idxs = try gpa.alloc(usize, rects.len);
+            var idxs = try allocator.alloc(usize, rects.len);
             for (0..idxs.len) |i| idxs[i] = i;
             std.sort.pdqContext(0, rects.len, Sort{ .rects = rects, .idxs = idxs });
             break :blk idxs;
         };
-        defer gpa.free(rect_indices);
+        defer allocator.free(rect_indices);
 
         var all_rects_packed = true;
         for (rect_indices) |i| {
@@ -86,11 +91,12 @@ pub const Packer = struct {
                 .y = result.y + rect.h,
                 .w = rect.w,
             };
+
             rect.result = .{
                 .placed = .{ .x = new_node.x, .y = result.y },
             };
 
-            try self.insertNode(gpa, result.idx, new_node);
+            try self.insertNode(allocator, result.idx, new_node);
         }
         return all_rects_packed;
     }
@@ -188,15 +194,15 @@ pub const Packer = struct {
 };
 
 test "smoke" {
-    const gpa = std.testing.allocator;
+    const alloc = std.testing.allocator;
 
-    var packer = try Packer.init(gpa, .{ .bin_w = 512, .bin_h = 512 });
-    defer packer.deinit(gpa);
+    var packer = try Packer.init(alloc, 512, 512);
+    defer packer.deinit(alloc);
 
     var rects: ArrayList(Rect) = .empty;
-    defer rects.deinit(gpa);
+    defer rects.deinit(alloc);
 
-    try rects.appendSlice(gpa, &.{
+    try rects.appendSlice(alloc, &.{
         .{ .id = 1, .w = 128, .h = 128 },
         .{ .id = 2, .w = 16, .h = 16 },
         .{ .id = 3, .w = 32, .h = 32 },
@@ -213,7 +219,7 @@ test "smoke" {
         .{ .id = 14, .w = 32, .h = 32 },
         .{ .id = 15, .w = 64, .h = 128 },
     });
-    _ = try packer.pack(gpa, rects.items);
+    _ = try packer.pack(alloc, rects.items);
 
     for (rects.items) |rect| {
         try std.testing.expect(rect.result == .placed);
@@ -221,15 +227,15 @@ test "smoke" {
 }
 
 test "readme example" {
-    const gpa = std.testing.allocator;
+    const alloc = std.testing.allocator;
 
-    var packer = try Packer.init(gpa, .{ .bin_w = 200, .bin_h = 128 });
-    defer packer.deinit(gpa);
+    var packer = try Packer.init(alloc, 200, 128);
+    defer packer.deinit(alloc);
 
     var rects: std.ArrayListUnmanaged(Rect) = .empty;
-    defer rects.deinit(gpa);
+    defer rects.deinit(alloc);
 
-    try rects.appendSlice(gpa, &.{
+    try rects.appendSlice(alloc, &.{
         .{ .id = 1, .w = 128, .h = 128 },
         .{ .id = 2, .w = 16, .h = 16 },
         .{ .id = 3, .w = 32, .h = 32 },
@@ -237,11 +243,11 @@ test "readme example" {
         .{ .id = 5, .w = 64, .h = 32 },
     });
 
-    _ = try packer.pack(gpa, rects.items);
+    _ = try packer.pack(alloc, rects.items);
 
     for (rects.items) |rect| {
         switch (rect.result) {
-            .placed => |pos| std.debug.print("rect {} placed at {},{}\n", .{ rect.id, pos.x, pos.y }),
+            .placed => |pos| std.debug.print("rect {} placed at ({}, {})\n", .{ rect.id, pos.x, pos.y }),
             .not_placed => std.debug.print("rect {} couldn't be placed\n", .{rect.id}),
         }
     }
