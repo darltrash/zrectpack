@@ -203,7 +203,7 @@ test "smoke" {
     _ = try packer.pack(gpa, rects.items);
 
     for (rects.items) |rect| {
-        try std.testing.expectEqual("placed", @tagName(rect.result));
+        try std.testing.expect(rect.result == .placed);
     }
 }
 
