@@ -28,19 +28,18 @@ const Sort = struct {
     rects: []Rect,
     idxs: []usize,
 
-    pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
+    pub fn lessThan(ctx: Sort, a: usize, b: usize) bool {
         const lhs = ctx.rects[ctx.idxs[a]];
         const rhs = ctx.rects[ctx.idxs[b]];
         return lhs.h > rhs.h or (lhs.h == rhs.h and lhs.w > rhs.w);
     }
 
-    pub fn swap(ctx: @This(), a: usize, b: usize) void {
+    pub fn swap(ctx: Sort, a: usize, b: usize) void {
         std.mem.swap(usize, &ctx.idxs[a], &ctx.idxs[b]);
     }
 };
 
 pub const Packer = struct {
-    const Self = @This();
     /// Bin width.
     w: u32,
     /// Bin height.
@@ -48,19 +47,19 @@ pub const Packer = struct {
     /// The skyline, ordered by x-pos in strictly increasing order.
     nodes: ArrayList(Node),
 
-    pub fn init(gpa: Allocator, opts: struct { bin_w: u32, bin_h: u32 }) !Self {
+    pub fn init(gpa: Allocator, opts: struct { bin_w: u32, bin_h: u32 }) !Packer {
         var nodes: ArrayList(Node) = .empty;
         try nodes.append(gpa, .{ .w = opts.bin_w, .x = 0, .y = 0 });
         return .{ .w = opts.bin_w, .h = opts.bin_h, .nodes = nodes };
     }
 
-    pub fn deinit(self: *Self, gpa: Allocator) void {
+    pub fn deinit(self: *Packer, gpa: Allocator) void {
         self.nodes.deinit(gpa);
         self.* = undefined;
     }
 
     /// Pack the supplied rects. Returns `true` if all rects were packed, `false` otherwise.
-    pub fn pack(self: *Self, gpa: Allocator, rects: []Rect) !bool {
+    pub fn pack(self: *Packer, gpa: Allocator, rects: []Rect) !bool {
         const rect_indices = blk: {
             var idxs = try gpa.alloc(usize, rects.len);
             for (0..idxs.len) |i| idxs[i] = i;
@@ -81,15 +80,23 @@ pub const Packer = struct {
                 all_rects_packed = false;
                 continue;
             };
-            const new_node: Node = .{ .x = self.nodes.items[result.idx].x, .y = result.y + rect.h, .w = rect.w };
-            rect.result = .{ .placed = .{ .x = new_node.x, .y = result.y } };
+
+            const new_node: Node = .{
+                .x = self.nodes.items[result.idx].x,
+                .y = result.y + rect.h,
+                .w = rect.w,
+            };
+            rect.result = .{
+                .placed = .{ .x = new_node.x, .y = result.y },
+            };
+
             try self.insertNode(gpa, result.idx, new_node);
         }
         return all_rects_packed;
     }
 
     /// Locates the skyline node that can accommodate the rect while maintaining the lowest skyline.
-    fn findResult(self: *@This(), rect: Rect) ?struct { idx: usize, y: u32 } {
+    fn findResult(self: *Packer, rect: Rect) ?struct { idx: usize, y: u32 } {
         var maybe_best_idx: ?usize = null;
         var best_y: u32 = std.math.maxInt(u32);
 
@@ -122,11 +129,14 @@ pub const Packer = struct {
             }
         }
 
-        return if (maybe_best_idx) |idx| .{ .idx = idx, .y = best_y } else null;
+        return if (maybe_best_idx) |idx| .{
+            .idx = idx,
+            .y = best_y,
+        } else null;
     }
 
     /// Inserts a new node and at the specified position.
-    fn insertNode(self: *Self, gpa: Allocator, i: usize, node: Node) !void {
+    fn insertNode(self: *Packer, gpa: Allocator, i: usize, node: Node) !void {
         // TODO: There's probably a clever way to only do all node updates with a single replaceRange call
         try self.nodes.insert(gpa, i, node);
 
@@ -179,10 +189,13 @@ pub const Packer = struct {
 
 test "smoke" {
     const gpa = std.testing.allocator;
+
     var packer = try Packer.init(gpa, .{ .bin_w = 512, .bin_h = 512 });
     defer packer.deinit(gpa);
+
     var rects: ArrayList(Rect) = .empty;
     defer rects.deinit(gpa);
+
     try rects.appendSlice(gpa, &.{
         .{ .id = 1, .w = 128, .h = 128 },
         .{ .id = 2, .w = 16, .h = 16 },
@@ -208,12 +221,14 @@ test "smoke" {
 }
 
 test "readme example" {
-    const zrp = @This(); // in the docs this would be replaced with @import("zrectpack")
     const gpa = std.testing.allocator;
-    var packer = try zrp.Packer.init(gpa, .{ .bin_w = 200, .bin_h = 128 });
+
+    var packer = try Packer.init(gpa, .{ .bin_w = 200, .bin_h = 128 });
     defer packer.deinit(gpa);
-    var rects: std.ArrayListUnmanaged(zrp.Rect) = .empty;
+
+    var rects: std.ArrayListUnmanaged(Rect) = .empty;
     defer rects.deinit(gpa);
+
     try rects.appendSlice(gpa, &.{
         .{ .id = 1, .w = 128, .h = 128 },
         .{ .id = 2, .w = 16, .h = 16 },
@@ -221,6 +236,7 @@ test "readme example" {
         .{ .id = 4, .w = 32, .h = 64 },
         .{ .id = 5, .w = 64, .h = 32 },
     });
+
     _ = try packer.pack(gpa, rects.items);
 
     for (rects.items) |rect| {
