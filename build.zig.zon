@@ -3,33 +3,7 @@
     .version = "0.0.0",
     .fingerprint = 0x80d7128ed510099b, // Changing this has security and trust implications.
     .minimum_zig_version = "0.15.0-dev.288+4b63f94b4",
-    .dependencies = .{
-        .sokol = .{
-            .url = "git+https://github.com/floooh/sokol-zig#9300d1a8d6d16f9201782ceae0cdf874fea673fe",
-            .hash = "sokol-0.1.0-pb1HK_6OLAAsKv0vZ-lhJSTgj0At1Dpd7NrAc9zRGdCy",
-            .lazy = true,
-        },
-        .sokolshdc = .{
-            .url = "git+https://github.com/floooh/sokol-tools-bin#9abc4ce9a851e199105ce7929f5d616bbb7118b4",
-            .hash = "sokolshdc-0.1.0-r2KZDkQ7kATqMDO-3JQ0tyE0YMfRYrmpYMtoj3vf9VK5",
-            .lazy = true,
-        },
-        .cimgui = .{
-            .url = "git+https://github.com/floooh/dcimgui#716dae9c6a03eec642a4fb2ac28ebcd2f52f76ba",
-            .hash = "cimgui-0.1.0-44ClkYmBhgC-Q3NWFyYqwThmmTdmkoIlAjF4ABfyqIAZ",
-            .lazy = true,
-        },
-        .stb = .{
-            .url = "git+https://github.com/nothings/stb.git#802cd454f25469d3123e678af41364153c132c2a",
-            .hash = "N-V-__8AAPEtTgB7um_-nfKGgYoN_0IZN3K2qNthdPAR6KFV",
-            .lazy = true,
-        },
-        .zbench = .{
-            .url = "git+https://github.com/hendriknielaender/zBench.git#d8c7dd485306b88b757d52005614ebcb0a336942",
-            .hash = "zbench-0.10.0-YTdc714iAQDO4lTHMnIljYHPZ5v_sNTsw75vAmO1pyT-",
-            .lazy = true,
-        },
-    },
+    .dependencies = .{},
 
     .paths = .{
         "LICENSE",
