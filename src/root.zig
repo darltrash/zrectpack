@@ -7,9 +7,9 @@ pub const Rect = struct {
     /// Reserved for your use.
     id: u32,
     /// Width, supplied by you.
-    w: u32,
+    w: usize,
     /// Height, supplied by you.
-    h: u32,
+    h: usize,
     /// Packing result. Should be initialized to `.not_placed` (default). Updated during packing.
     result: PackResult = .not_placed,
 };
@@ -17,11 +17,11 @@ pub const Rect = struct {
 /// Indicates whether a rect was placed, and if so, where.
 pub const PackResult = union(enum) {
     not_placed,
-    placed: struct { x: u32, y: u32 },
+    placed: struct { x: usize, y: usize },
 };
 
 /// A node representing a point in the skyline and the width it covers.
-const Node = struct { x: u32, y: u32, w: u32 };
+const Node = struct { x: usize, y: usize, w: usize };
 
 /// Sorts the supplied indices according by height of their respective rect
 const Sort = struct {
@@ -41,13 +41,13 @@ const Sort = struct {
 
 pub const Packer = struct {
     /// Bin width.
-    w: u32,
+    w: usize,
     /// Bin height.
-    h: u32,
+    h: usize,
     /// The skyline, ordered by x-pos in strictly increasing order.
     nodes: ArrayList(Node),
 
-    pub fn init(allocator: Allocator, w: u32, h: u32) !Packer {
+    pub fn init(allocator: Allocator, w: usize, h: usize) !Packer {
         var nodes: ArrayList(Node) = .empty;
         try nodes.append(allocator, .{ .w = w, .x = 0, .y = 0 });
 
@@ -102,9 +102,9 @@ pub const Packer = struct {
     }
 
     /// Locates the skyline node that can accommodate the rect while maintaining the lowest skyline.
-    fn findResult(self: *Packer, rect: Rect) ?struct { idx: usize, y: u32 } {
+    fn findResult(self: *Packer, rect: Rect) ?struct { idx: usize, y: usize } {
         var maybe_best_idx: ?usize = null;
-        var best_y: u32 = std.math.maxInt(u32);
+        var best_y: usize = std.math.maxInt(usize);
 
         for (0..self.nodes.items.len) |start| {
             const node = self.nodes.items[start];
@@ -113,9 +113,9 @@ pub const Packer = struct {
             if (node.x + rect.w > self.w) break;
 
             // locate the highest point that the rect can be placed at
-            const top_y: u32 = blk: {
-                var accumulated_width: u32 = 0;
-                var top_y: u32 = node.y;
+            const top_y: usize = blk: {
+                var accumulated_width: usize = 0;
+                var top_y: usize = node.y;
                 for (self.nodes.items[start..]) |seg| {
                     accumulated_width += seg.w;
                     top_y = @max(top_y, seg.y);
